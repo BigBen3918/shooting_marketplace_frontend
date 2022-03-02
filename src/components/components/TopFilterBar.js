@@ -1,19 +1,8 @@
 import React, { memo, useCallback } from "react";
 import Select from "react-select";
-import { useDispatch } from "react-redux";
 import { categories } from "./constants/filters";
-import { filterCategories, filterNftTitle } from "../../store/actions";
 
 const TopFilterBar = () => {
-    const dispatch = useDispatch();
-    const handleCategory = useCallback(
-        (option) => {
-            const { value } = option;
-            dispatch(filterCategories({ value, singleSelect: true }));
-        },
-        [dispatch]
-    );
-
     const filterNftTitles = useCallback((event) => {
         const value = event.target.value;
         console.log(value);
@@ -76,7 +65,6 @@ const TopFilterBar = () => {
                     styles={customStyles}
                     menuContainerStyle={{ zIndex: 999 }}
                     options={[defaultValue, ...categories]}
-                    onChange={handleCategory}
                 />
             </div>
         </div>

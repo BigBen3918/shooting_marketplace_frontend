@@ -4,11 +4,14 @@ import Breakpoint, {
     setDefaultBreakpoints,
 } from "react-socks";
 import { Link } from "@reach/router";
+import { useSelector } from "react-redux";
 import { Dialog, TextField, DialogTitle, Grid, Button } from "@mui/material";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { createTheme, ThemeProvider, styled } from "@mui/material/styles";
 import { useWallet } from "use-wallet";
-import { styled } from "@mui/material/styles";
-// import { ethers } from "ethers";
+import { ethers } from "ethers";
+import { NotificationManager } from "react-notifications";
+
+import Action from "../../Service/action";
 
 setDefaultBreakpoints([{ xs: 0 }, { l: 979 }, { xl: 980 }]);
 
@@ -58,9 +61,87 @@ const CssTextField = styled(TextField)({
 
 function SimpleDialog(props) {
     const { onClose, open } = props;
+    const wallet = useWallet();
+    const [name, setName] = useState("");
+    const [nick, setNick] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const msg = "Welcome to a ICICB Shooting";
 
     const handleClose = () => {
         onClose();
+    };
+
+    const handleSingup = async () => {
+        const validEmail = new RegExp(
+            "^[a-zA-Z0-9._:$!%-]+@[a-zA-Z0-9.-]+.[a-zA-Z]$"
+        );
+        const validName = new RegExp("^[a-zA-Z]");
+
+        if (wallet.status !== "connected") {
+            NotificationManager.error("Please connect Metamask");
+            return;
+        }
+
+        if (name.trim() === "") {
+            NotificationManager.error("Fill the Full Name");
+            return;
+        }
+        if (!validName.test(name) || name.length < 3) {
+            NotificationManager.error("Full Name Invalid");
+            return;
+        }
+        if (nick.trim() === "") {
+            NotificationManager.error("Fill the Nick Name");
+            return;
+        }
+        if (nick.length < 3) {
+            NotificationManager.error("Nick Name Invalid");
+            return;
+        }
+        if (email.trim() === "") {
+            NotificationManager.error("Fill the Email");
+            return;
+        }
+        if (!validEmail.test(email)) {
+            NotificationManager.error("Email Invalid");
+            return;
+        }
+        if (password.trim() === "") {
+            NotificationManager.error("Fill the Password");
+            return;
+        }
+        if (password.length < 8) {
+            NotificationManager.error("Password Invalid");
+            return;
+        }
+        try {
+            const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+            const signer = await provider.getSigner();
+            const signature = await signer.signMessage(msg);
+
+            Action.register({
+                signature: signature,
+                msg: msg,
+                name: name,
+                nick: nick,
+                email: email,
+                password: password,
+            });
+
+            setName("");
+            setNick("");
+            setEmail("");
+            setPassword("");
+            handleClose();
+        } catch (err) {
+            console.log(err);
+            NotificationManager.error("Operation Error");
+            setName("");
+            setNick("");
+            setEmail("");
+            setPassword("");
+        }
     };
 
     return (
@@ -78,49 +159,68 @@ function SimpleDialog(props) {
                 >
                     <Grid item xs={10} md={5}>
                         <CssTextField
-                            id="name"
                             label="Full Name"
                             type="Text"
-                            fullWidth
                             variant="outlined"
+                            fullWidth
+                            onChange={(e) => setName(e.target.value)}
+                            value={name}
                         />
                     </Grid>
                     <Grid item xs={10} md={5}>
                         <CssTextField
-                            id="nick"
                             label="Nick Name"
                             type="Text"
-                            fullWidth
                             variant="outlined"
+                            fullWidth
+                            onChange={(e) => setNick(e.target.value)}
+                            value={nick}
                         />
                     </Grid>
                     <Grid item xs={10} md={10}>
                         <CssTextField
-                            id="email"
                             label="Email Address"
                             type="Email"
-                            fullWidth
                             variant="outlined"
+                            fullWidth
+                            onChange={(e) => setEmail(e.target.value)}
+                            value={email}
                         />
                     </Grid>
                     <Grid item xs={10} md={10}>
                         <CssTextField
                             label="Password"
-                            id="custom-css-outlined-input"
                             type="password"
-                            fullWidth
                             variant="outlined"
+                            fullWidth
+                            onChange={(e) => setPassword(e.target.value)}
+                            value={password}
                         />
                     </Grid>
                     <Grid item xs={10}>
-                        <Button
-                            fullWidth
-                            color="primary"
-                            variant="outlined"
-                            className="btn-1"
-                        >
-                            Sign Up
-                        </Button>
+                        {wallet.status === "connected" ? (
+                            <Button
+                                fullWidth
+                                color="primary"
+                                variant="outlined"
+                                className="btn-1"
+                                onClick={handleSingup}
+                            >
+                                Sign Up
+                            </Button>
+                        ) : (
+                            <Button
+                                fullWidth
+                                color="primary"
+                                variant="outlined"
+                                className="btn-1"
+                                onClick={() => {
+                                    wallet.connect();
+                                }}
+                            >
+                                Connect Wallet
+                            </Button>
+                        )}
                     </Grid>
                 </Grid>
             </Dialog>
@@ -129,9 +229,15 @@ function SimpleDialog(props) {
 }
 
 const Header = function ({ className }) {
-    const [showmenu, btn_icon] = useState(false);
     const wallet = useWallet();
+    const auth = useSelector((state) => state.auth.auth);
+    const msg = "Welcome to a ICICB Shooting";
+
+    console.log(auth);
+
+    const [showmenu, btn_icon] = useState(false);
     const [open, setOpen] = useState(false);
+
     const handleClose = () => {
         setOpen(false);
     };
@@ -168,6 +274,19 @@ const Header = function ({ className }) {
     const handleConnect = async () => {
         if (wallet.status !== "connected") {
             wallet.connect();
+        } else {
+            try {
+                const provider = new ethers.providers.Web3Provider(
+                    wallet.ethereum
+                );
+                const signer = await provider.getSigner();
+                const signature = await signer.signMessage(msg);
+
+                Action.login({ signature: signature });
+            } catch (err) {
+                console.log(err);
+                NotificationManager.error("SignIn Failed");
+            }
         }
     };
     const disconnect = () => {
@@ -260,7 +379,7 @@ const Header = function ({ className }) {
                         </Breakpoint>
                     </BreakpointProvider>
                     <div className="mainside" style={{ right: "165px" }}>
-                        {wallet.status === "connected" ? (
+                        {auth !== "" ? (
                             <div className="connect-wal">
                                 <NavLink to="" onClick={disconnect}>
                                     {styleAddress}
@@ -282,13 +401,17 @@ const Header = function ({ className }) {
                         )}
                     </div>
                     &nbsp;&nbsp;&nbsp;
-                    <div className="mainside">
-                        <div className="connect-wal">
-                            <NavLink to="" onClick={toggleDialog}>
-                                Sign Up
-                            </NavLink>
+                    {auth === "" ? (
+                        <div className="mainside">
+                            <div className="connect-wal">
+                                <NavLink to="" onClick={toggleDialog}>
+                                    Sign Up
+                                </NavLink>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        ""
+                    )}
                 </div>
                 <SimpleDialog open={open} onClose={handleClose} />
 

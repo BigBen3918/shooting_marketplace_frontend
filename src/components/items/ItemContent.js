@@ -11,7 +11,7 @@ function ItemContent() {
     const [state, { GetUserNFTs }] = useBlockchainContext();
     const data = GetUserNFTs();
     const nftData = [];
-    
+
     useEffect(() => {
         if (wallet.status !== "connected") {
             navigate("/");

@@ -1,6 +1,8 @@
-import React from "react";
-import { Router, Location, Redirect } from "@reach/router";
+import React, { useEffect } from "react";
+import { Router, Location } from "@reach/router";
 import { NotificationContainer } from "react-notifications";
+import { useDispatch } from "react-redux";
+import { useWallet } from "use-wallet";
 
 import ScrollToTopBtn from "./menu/ScrollToTop";
 import Header from "./menu/header";
@@ -35,22 +37,35 @@ const PosedRouter = ({ children }) => (
     </Location>
 );
 
-const App = () => (
-    <div className="wraper">
-        <GlobalStyles />
-        <NotificationContainer />
-        <Header />
-        <PosedRouter>
-            <ScrollTop path="/">
-                <Home path="/" />
-                <MarketPlace path="/market" />
-                <MyPage path="/mypage" />
-                <ItemDetail path="/create/:nftId" />
-                <MyItemDetail path="/view/:nftId" />
-            </ScrollTop>
-        </PosedRouter>
-        <ScrollToTopBtn />
-    </div>
-);
+const App = () => {
+    const wallet = useWallet();
+    const dispatch = useDispatch();
+    useEffect(() => {
+        if (wallet.status !== "connected") {
+            dispatch({
+                type: "SET_AUTH",
+                payload: "",
+            });
+        }
+    }, [wallet.status]);
+
+    return (
+        <div className="wraper">
+            <GlobalStyles />
+            <NotificationContainer />
+            <Header />
+            <PosedRouter>
+                <ScrollTop path="/">
+                    <Home path="/" />
+                    <MarketPlace path="/market" />
+                    <MyPage path="/mypage" />
+                    <ItemDetail path="/create/:nftId" />
+                    <MyItemDetail path="/view/:nftId" />
+                </ScrollTop>
+            </PosedRouter>
+            <ScrollToTopBtn />
+        </div>
+    );
+};
 
 export default App;
